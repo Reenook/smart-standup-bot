@@ -1,6 +1,6 @@
 ﻿# Smart Standup Bot
 
-AI-powered daily standup assistant built with Next.js, AI SDK, Google Gemini, and Supabase.
+AI-powered daily standup assistant built with Next.js, AI SDK, Google Gemini, LangChain, and Supabase.
 
 ## What This Project Does
 
@@ -18,9 +18,10 @@ Users submit free-form standup text, and the app:
 This version includes:
 
 - AI SDK structured output parsing with Zod validation (`Output.object`)
+- LangChain-powered text chunking using `RecursiveCharacterTextSplitter`
 - resilient input preprocessing for long standups:
   - newline normalization
-  - large-input chunking with overlap
+  - large-input chunking with overlap via LangChain
   - bounded prompt size for better latency
 - Next.js App Router API routes for standup CRUD
 - Supabase persistence (`standups` table)
@@ -32,6 +33,7 @@ This version includes:
 - Next.js 16 (App Router)
 - React 19 + TypeScript
 - AI SDK (`ai`) + `@ai-sdk/google`
+- LangChain text splitting (`@langchain/textsplitters`, `@langchain/core`)
 - Supabase (`@supabase/supabase-js`)
 - Tailwind CSS 4 + shadcn/ui + Radix
 - Zod
@@ -39,7 +41,7 @@ This version includes:
 ## Project Structure
 
 - `src/app/page.tsx`: main dashboard layout
-- `src/app/api/standups/route.ts`: POST/GET/DELETE standup API
+- `src/app/api/standups/route.ts`: POST/GET/DELETE standup API + LangChain chunking pipeline
 - `src/components/*`: form, sidebar, history feed, standup detail views
 - `src/lib/types.ts`: shared types
 
@@ -132,7 +134,8 @@ Request body:
 ## Notes on AI Processing
 
 - Normal-size standups are sent directly.
-- Very long standups are normalized and chunked before prompting.
+- Very long standups are normalized and chunked with LangChain `RecursiveCharacterTextSplitter` before prompting.
+- Chunking is bounded to cap prompt size and preserve request latency.
 - Structured output is validated through Zod to keep response shape stable.
 
 ## Scripts
