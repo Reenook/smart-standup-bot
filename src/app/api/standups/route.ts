@@ -1,5 +1,6 @@
 import { generateText, Output } from 'ai';
 import { google } from '@ai-sdk/google';
+import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import type { Standup, StandupInput, StandupResponse } from '@/lib/types';
@@ -20,45 +21,36 @@ const CHUNKING_THRESHOLD = 3000;
 const PROMPT_CHUNK_SIZE = 2200;
 const PROMPT_CHUNK_OVERLAP = 80;
 const MAX_CHUNKS = 3;
+const splitter = new RecursiveCharacterTextSplitter({
+    chunkSize: PROMPT_CHUNK_SIZE,
+    chunkOverlap: PROMPT_CHUNK_OVERLAP,
+    separators: ['\n\n', '\n', '. ', ' ', ''],
+});
 
 function normalizeStandupInput(input: string): string {
     return input.replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
-function chunkStandupInput(input: string): string[] {
+async function chunkStandupInput(input: string): Promise<string[]> {
     if (input.length <= CHUNKING_THRESHOLD) {
         return [input];
     }
 
-    const chunks: string[] = [];
-    let start = 0;
+    const chunks = (await splitter.splitText(input))
+        .map((chunk) => chunk.trim())
+        .filter(Boolean)
+        .slice(0, MAX_CHUNKS);
 
-    while (start < input.length && chunks.length < MAX_CHUNKS) {
-        const maxEnd = Math.min(start + PROMPT_CHUNK_SIZE, input.length);
-        let end = maxEnd;
-
-        if (maxEnd < input.length) {
-            const windowText = input.slice(start, maxEnd);
-            const breakAt = Math.max(windowText.lastIndexOf('\n\n'), windowText.lastIndexOf('. '));
-            if (breakAt > PROMPT_CHUNK_SIZE * 0.5) {
-                end = start + breakAt + (windowText[breakAt] === '.' ? 1 : 0);
-            }
-        }
-
-        chunks.push(input.slice(start, end).trim());
-        if (end >= input.length) {
-            break;
-        }
-
-        start = Math.max(0, end - PROMPT_CHUNK_OVERLAP);
+    if (chunks.length === 0) {
+        return [input];
     }
 
-    return chunks.filter(Boolean);
+    return chunks;
 }
 
-function buildStandupPrompt(rawInput: string): string {
+async function buildStandupPrompt(rawInput: string): Promise<string> {
     const normalized = normalizeStandupInput(rawInput);
-    const chunks = chunkStandupInput(normalized);
+    const chunks = await chunkStandupInput(normalized);
 
     if (chunks.length === 1) {
         return `Parse this standup:\n\n${chunks[0]}`;
@@ -93,7 +85,7 @@ export async function POST(req: Request): Promise<Response> {
 3. Any blockers (blockers)
 4. A clean detailed executive summary (summary)
 Be concise but comprehensive. Format as JSON. Avoid Jargon`,
-            prompt: buildStandupPrompt(rawInput),
+            prompt: await buildStandupPrompt(rawInput),
             output: Output.object({
                 schema: standupSchema,
             }),
