@@ -41,11 +41,9 @@ export default async function Home({
   const standups = await getStandups();
   const { id } = await searchParams;
 
-  // Logic to find the selected standup based on the URL ID
-  // Default to the first (latest) standup if no ID is provided
   const selectedStandup = id
       ? standups.find((s) => s.id.toString() === id)
-      : standups[0];
+      : undefined;
 
   return (
       <SidebarProvider>
@@ -65,7 +63,7 @@ export default async function Home({
               <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-semibold text-muted-foreground">
                 {selectedStandup
                   ? `Update from ${headerDateFormatter.format(new Date(selectedStandup.created_at))}`
-                  : "No updates yet"}
+                  : "Select a standup to view details"}
               </div>
             </div>
           </header>
@@ -91,7 +89,9 @@ export default async function Home({
                   {selectedStandup ? (
                       <StandupDetail selectedStandup={selectedStandup} />
                   ) : (
-                    <p className="text-muted-foreground italic">No history available yet.</p>
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-muted-foreground">
+                      Select an item from history to view its summary, accomplishments, blockers, and next steps.
+                    </div>
                   )}
                 </section>
               </div>

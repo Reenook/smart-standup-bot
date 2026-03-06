@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+    Plus,
     BadgeCheck,
     Calendar,
     ChevronsUpDown,
@@ -53,10 +54,21 @@ export function AppSidebar({ initialStandups, ...props }: AppSidebarProps) {
     const selectedId = searchParams.get("id");
     const [standups, setStandups] = React.useState<Standup[]>(initialStandups);
 
+    React.useEffect(() => {
+        setStandups(initialStandups);
+    }, [initialStandups]);
+
     const handleSelect = React.useCallback((id: number) => {
         const params = new URLSearchParams(searchParams.toString());
         params.set("id", id.toString());
         router.push(`?${params.toString()}`);
+    }, [router, searchParams]);
+
+    const handleCreateNew = React.useCallback(() => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete("id");
+        const nextQuery = params.toString();
+        router.push(nextQuery ? `?${nextQuery}` : "/");
     }, [router, searchParams]);
 
     // Listen for new standups
@@ -65,8 +77,15 @@ export function AppSidebar({ initialStandups, ...props }: AppSidebarProps) {
             setStandups((prev) => [event.detail, ...prev]);
             handleSelect(event.detail.id);
         };
+        const handleStandupDeleted = (event: CustomEvent<number>) => {
+            setStandups((prev) => prev.filter((standup) => standup.id !== event.detail));
+        };
         window.addEventListener('standupAdded', handleStandupAdded as EventListener);
-        return () => window.removeEventListener('standupAdded', handleStandupAdded as EventListener);
+        window.addEventListener('standupDeleted', handleStandupDeleted as EventListener);
+        return () => {
+            window.removeEventListener('standupAdded', handleStandupAdded as EventListener);
+            window.removeEventListener('standupDeleted', handleStandupDeleted as EventListener);
+        };
     }, [handleSelect]);
 
     return (
@@ -98,6 +117,20 @@ export function AppSidebar({ initialStandups, ...props }: AppSidebarProps) {
 
             {/* 2. CONTENT: History Section (Styled like NavProjects) */}
             <SidebarContent>
+                <SidebarGroup>
+                    <SidebarMenu>
+                        <SidebarMenuItem>
+                            <SidebarMenuButton
+                                onClick={handleCreateNew}
+                                isActive={!selectedId}
+                                className="rounded-2xl border border-white/10 bg-white/5 data-[active=true]:bg-white/10 data-[active=true]:text-white hover:bg-white/10"
+                            >
+                                <Plus className="size-4" />
+                                <span>Add New Standup</span>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    </SidebarMenu>
+                </SidebarGroup>
                 <SidebarGroup>
                     <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         History
