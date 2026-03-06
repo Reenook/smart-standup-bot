@@ -3,6 +3,7 @@
 import { useId, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
 import type { StandupResponse, Standup } from '@/lib/types';
 
 export function StandupFormContainer() {
@@ -41,6 +42,7 @@ export function StandupFormContainer() {
                 window.dispatchEvent(
                     new CustomEvent('standupAdded', { detail: data.data as Standup })
                 );
+                toast.success('Standup summary is ready.');
                 setInput('');
             }
         } catch (err) {
